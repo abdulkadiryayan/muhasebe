@@ -1,6 +1,7 @@
 from models.database import MuhasebeDB
 from datetime import datetime
 from openpyxl import Workbook
+from openpyxl.styles import PatternFill
 import os
 
 class MuhasebeViewModel:

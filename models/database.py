@@ -100,7 +100,7 @@ class MuhasebeDB:
 
     def kasa_sil(self, id):
         self.cursor.execute('DELETE FROM kasa_yonetimi WHERE id=?', (id,))
-        self.conn.commit()
+        self.conn.commit()  
 
     # Fatura ve İrsaliye İşlemleri
     def fatura_ekle(self, fatura_no, tutar, tur):
