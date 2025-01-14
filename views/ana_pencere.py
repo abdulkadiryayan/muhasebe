@@ -21,6 +21,9 @@ class AnaPencere(tk.Tk):
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(expand=True, fill='both', padx=10, pady=5)
         
+        # Sekme değişim olayını bağla
+        self.notebook.bind('<<NotebookTabChanged>>', self.sekme_degisti)
+        
         # Sekmeleri oluştur
         self.cari_hesap_sekmesi_olustur()
         self.kasa_sekmesi_olustur()
@@ -54,10 +57,49 @@ class AnaPencere(tk.Tk):
         # Rapor menüsü
         rapor_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Raporlar", menu=rapor_menu)
-        rapor_menu.add_command(label="Cari Hesap Raporu")
-        rapor_menu.add_command(label="Kasa Raporu")
-        rapor_menu.add_command(label="Fatura Raporu")
-        rapor_menu.add_command(label="Çek/Senet Raporu")
+        rapor_menu.add_command(label="Cari Hesap Raporu", command=self.cari_hesap_raporu)
+        rapor_menu.add_command(label="Kasa Raporu", command=self.kasa_raporu)
+        rapor_menu.add_command(label="Fatura Raporu", command=self.fatura_raporu)
+        rapor_menu.add_command(label="Çek/Senet Raporu", command=self.cek_senet_raporu)
+
+    def rapor_olustur(self, rapor_fonksiyonu, rapor_adi):
+        """Genel rapor oluşturma fonksiyonu"""
+        try:
+            basarili, dosya_yolu = rapor_fonksiyonu()
+            
+            if basarili:
+                cevap = messagebox.askquestion(
+                    "Başarılı", 
+                    f"{rapor_adi} oluşturuldu:\n{dosya_yolu}\n\nRaporu açmak ister misiniz?"
+                )
+                if cevap == 'yes':
+                    try:
+                        os.startfile(dosya_yolu)
+                    except:
+                        import subprocess
+                        subprocess.Popen(['start', dosya_yolu], shell=True)
+            else:
+                messagebox.showerror(
+                    "Hata",
+                    f"Rapor oluşturulurken bir hata oluştu:\n{dosya_yolu}"
+                )
+        except Exception as e:
+            messagebox.showerror(
+                "Hata",
+                f"Beklenmeyen bir hata oluştu:\n{str(e)}"
+            )
+
+    def cari_hesap_raporu(self):
+        self.rapor_olustur(self.viewmodel.cari_hesap_raporu, "Cari Hesap Raporu")
+        
+    def kasa_raporu(self):
+        self.rapor_olustur(self.viewmodel.kasa_raporu, "Kasa Raporu")
+        
+    def fatura_raporu(self):
+        self.rapor_olustur(self.viewmodel.fatura_raporu, "Fatura Raporu")
+        
+    def cek_senet_raporu(self):
+        self.rapor_olustur(self.viewmodel.cek_senet_raporu, "Çek/Senet Raporu")
 
     def tablo_olustur(self, parent):
         # Tablo oluşturma fonksiyonu
@@ -88,10 +130,16 @@ class AnaPencere(tk.Tk):
         self.alacak = ttk.Entry(form_frame)
         self.alacak.grid(row=2, column=1, padx=5, pady=5)
         
+        ttk.Label(form_frame, text="İşlem Tarihi:").grid(row=3, column=0, padx=5, pady=5)
+        self.cari_tarih = DateEntry(form_frame, width=20, 
+                                  date_pattern='dd/mm/yyyy',
+                                  locale='tr_TR')
+        self.cari_tarih.grid(row=3, column=1, padx=5, pady=5)
+        
         # Butonlar
-        ttk.Button(form_frame, text="Kaydet", command=self.cari_hesap_kaydet).grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(form_frame, text="Sil", command=self.cari_hesap_sil).grid(row=4, column=0, columnspan=2, pady=5)
-        ttk.Button(form_frame, text="Güncelle", command=self.cari_hesap_guncelle).grid(row=5, column=0, columnspan=2, pady=5)
+        ttk.Button(form_frame, text="Kaydet", command=self.cari_hesap_kaydet).grid(row=4, column=0, columnspan=2, pady=10)
+        ttk.Button(form_frame, text="Sil", command=self.cari_hesap_sil).grid(row=5, column=0, columnspan=2, pady=5)
+        ttk.Button(form_frame, text="Güncelle", command=self.cari_hesap_guncelle).grid(row=6, column=0, columnspan=2, pady=5)
         
         # Sağ frame - Tablo
         tablo_frame = ttk.LabelFrame(cari_frame, text="Cari Hesap Listesi", padding=10)
@@ -99,19 +147,21 @@ class AnaPencere(tk.Tk):
         
         # Tablo oluşturma
         self.cari_tablo = self.tablo_olustur(tablo_frame)
-        self.cari_tablo["columns"] = ("id", "musteri_adi", "borc", "alacak", "bakiye")
+        self.cari_tablo["columns"] = ("id", "musteri_adi", "borc", "alacak", "bakiye", "islem_tarihi")
         self.cari_tablo.column("#0", width=0, stretch=tk.NO)
         self.cari_tablo.column("id", width=50)
         self.cari_tablo.column("musteri_adi", width=150)
         self.cari_tablo.column("borc", width=100)
         self.cari_tablo.column("alacak", width=100)
         self.cari_tablo.column("bakiye", width=100)
+        self.cari_tablo.column("islem_tarihi", width=150)
         
         self.cari_tablo.heading("id", text="ID")
         self.cari_tablo.heading("musteri_adi", text="Müşteri Adı")
         self.cari_tablo.heading("borc", text="Borç")
         self.cari_tablo.heading("alacak", text="Alacak")
         self.cari_tablo.heading("bakiye", text="Bakiye")
+        self.cari_tablo.heading("islem_tarihi", text="İşlem Tarihi")
         
         self.cari_tablo.pack(fill="both", expand=True)
         self.cari_hesaplari_listele()
@@ -137,10 +187,16 @@ class AnaPencere(tk.Tk):
         self.gider = ttk.Entry(form_frame)
         self.gider.grid(row=2, column=1, padx=5, pady=5)
         
+        ttk.Label(form_frame, text="İşlem Tarihi:").grid(row=3, column=0, padx=5, pady=5)
+        self.kasa_tarih = DateEntry(form_frame, width=20, 
+                                  date_pattern='dd/mm/yyyy',
+                                  locale='tr_TR')
+        self.kasa_tarih.grid(row=3, column=1, padx=5, pady=5)
+        
         # Butonlar
-        ttk.Button(form_frame, text="Kaydet", command=self.kasa_kaydet).grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(form_frame, text="Sil", command=self.kasa_sil).grid(row=4, column=0, columnspan=2, pady=5)
-        ttk.Button(form_frame, text="Güncelle", command=self.kasa_guncelle).grid(row=5, column=0, columnspan=2, pady=5)
+        ttk.Button(form_frame, text="Kaydet", command=self.kasa_kaydet).grid(row=4, column=0, columnspan=2, pady=10)
+        ttk.Button(form_frame, text="Sil", command=self.kasa_sil).grid(row=5, column=0, columnspan=2, pady=5)
+        ttk.Button(form_frame, text="Güncelle", command=self.kasa_guncelle).grid(row=6, column=0, columnspan=2, pady=5)
         
         # Sağ frame - Tablo
         tablo_frame = ttk.LabelFrame(kasa_frame, text="Kasa Hareketleri", padding=10)
@@ -148,19 +204,21 @@ class AnaPencere(tk.Tk):
         
         # Tablo oluşturma
         self.kasa_tablo = self.tablo_olustur(tablo_frame)
-        self.kasa_tablo["columns"] = ("id", "kasa_adi", "gelir", "gider", "bakiye")
+        self.kasa_tablo["columns"] = ("id", "kasa_adi", "gelir", "gider", "bakiye", "islem_tarihi")
         self.kasa_tablo.column("#0", width=0, stretch=tk.NO)
         self.kasa_tablo.column("id", width=50)
         self.kasa_tablo.column("kasa_adi", width=150)
         self.kasa_tablo.column("gelir", width=100)
         self.kasa_tablo.column("gider", width=100)
         self.kasa_tablo.column("bakiye", width=100)
+        self.kasa_tablo.column("islem_tarihi", width=150)
         
         self.kasa_tablo.heading("id", text="ID")
         self.kasa_tablo.heading("kasa_adi", text="Kasa Adı")
         self.kasa_tablo.heading("gelir", text="Gelir")
         self.kasa_tablo.heading("gider", text="Gider")
         self.kasa_tablo.heading("bakiye", text="Bakiye")
+        self.kasa_tablo.heading("islem_tarihi", text="İşlem Tarihi")
         
         self.kasa_tablo.pack(fill="both", expand=True)
 
@@ -185,10 +243,16 @@ class AnaPencere(tk.Tk):
         self.fatura_tur = ttk.Combobox(form_frame, values=["Satış Faturası", "Alış Faturası"])
         self.fatura_tur.grid(row=2, column=1, padx=5, pady=5)
         
+        ttk.Label(form_frame, text="İşlem Tarihi:").grid(row=3, column=0, padx=5, pady=5)
+        self.fatura_tarih = DateEntry(form_frame, width=20, 
+                                    date_pattern='dd/mm/yyyy',
+                                    locale='tr_TR')
+        self.fatura_tarih.grid(row=3, column=1, padx=5, pady=5)
+        
         # Butonlar
-        ttk.Button(form_frame, text="Kaydet", command=self.fatura_kaydet).grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(form_frame, text="Sil", command=self.fatura_sil).grid(row=4, column=0, columnspan=2, pady=5)
-        ttk.Button(form_frame, text="Güncelle", command=self.fatura_guncelle).grid(row=5, column=0, columnspan=2, pady=5)
+        ttk.Button(form_frame, text="Kaydet", command=self.fatura_kaydet).grid(row=4, column=0, columnspan=2, pady=10)
+        ttk.Button(form_frame, text="Sil", command=self.fatura_sil).grid(row=5, column=0, columnspan=2, pady=5)
+        ttk.Button(form_frame, text="Güncelle", command=self.fatura_guncelle).grid(row=6, column=0, columnspan=2, pady=5)
         
         # Sağ frame - Tablo
         tablo_frame = ttk.LabelFrame(fatura_frame, text="Fatura Listesi", padding=10)
@@ -196,17 +260,19 @@ class AnaPencere(tk.Tk):
         
         # Tablo oluşturma
         self.fatura_tablo = self.tablo_olustur(tablo_frame)
-        self.fatura_tablo["columns"] = ("id", "fatura_no", "tutar", "tur")
+        self.fatura_tablo["columns"] = ("id", "fatura_no", "tutar", "tur", "islem_tarihi")
         self.fatura_tablo.column("#0", width=0, stretch=tk.NO)
         self.fatura_tablo.column("id", width=50)
         self.fatura_tablo.column("fatura_no", width=150)
         self.fatura_tablo.column("tutar", width=100)
         self.fatura_tablo.column("tur", width=100)
+        self.fatura_tablo.column("islem_tarihi", width=150)
         
         self.fatura_tablo.heading("id", text="ID")
         self.fatura_tablo.heading("fatura_no", text="Fatura No")
         self.fatura_tablo.heading("tutar", text="Tutar")
         self.fatura_tablo.heading("tur", text="Tür")
+        self.fatura_tablo.heading("islem_tarihi", text="İşlem Tarihi")
         
         self.fatura_tablo.pack(fill="both", expand=True)
 
@@ -260,10 +326,13 @@ class AnaPencere(tk.Tk):
     # Cari Hesap İşlemleri
     def cari_hesap_kaydet(self):
         try:
+            islem_tarihi = self.cari_tarih.get_date()
+            
             if self.viewmodel.cari_hesap_ekle(
                 self.musteri_adi.get(),
                 float(self.borc.get() or 0),
-                float(self.alacak.get() or 0)
+                float(self.alacak.get() or 0),
+                islem_tarihi
             ):
                 messagebox.showinfo("Başarılı", "Cari hesap kaydedildi")
                 self.cari_hesaplari_listele()
@@ -279,20 +348,31 @@ class AnaPencere(tk.Tk):
         
         for hesap in self.viewmodel.cari_hesap_listele():
             bakiye = self.viewmodel.cari_hesap_bakiye_hesapla(hesap[0])
-            self.cari_tablo.insert("", "end", values=(hesap[0], hesap[1], hesap[2], hesap[3], bakiye))
+            self.cari_tablo.insert("", "end", values=(
+                hesap[0],          # ID
+                hesap[1],          # Müşteri Adı
+                hesap[2],          # Borç
+                hesap[3],          # Alacak
+                bakiye,            # Bakiye
+                hesap[4]           # İşlem Tarihi
+            ))
 
     def cari_hesap_formu_temizle(self):
         self.musteri_adi.delete(0, tk.END)
         self.borc.delete(0, tk.END)
         self.alacak.delete(0, tk.END)
+        self.cari_tarih.set_date(datetime.now())
 
     # Kasa İşlemleri
     def kasa_kaydet(self):
         try:
+            islem_tarihi = self.kasa_tarih.get_date()
+            
             if self.viewmodel.kasa_ekle(
                 self.kasa_adi.get(),
                 float(self.gelir.get() or 0),
-                float(self.gider.get() or 0)
+                float(self.gider.get() or 0),
+                islem_tarihi
             ):
                 messagebox.showinfo("Başarılı", "Kasa kaydedildi")
                 self.kasa_listele()
@@ -308,20 +388,31 @@ class AnaPencere(tk.Tk):
         
         for kasa in self.viewmodel.kasa_listele():
             bakiye = self.viewmodel.kasa_bakiye_hesapla(kasa[0])
-            self.kasa_tablo.insert("", "end", values=(kasa[0], kasa[1], kasa[2], kasa[3], bakiye))
+            self.kasa_tablo.insert("", "end", values=(
+                kasa[0],           # ID
+                kasa[1],           # Kasa Adı
+                kasa[2],           # Gelir
+                kasa[3],           # Gider
+                bakiye,            # Bakiye
+                kasa[4]           # İşlem Tarihi
+            ))
 
     def kasa_formu_temizle(self):
         self.kasa_adi.delete(0, tk.END)
         self.gelir.delete(0, tk.END)
         self.gider.delete(0, tk.END)
+        self.kasa_tarih.set_date(datetime.now())
 
     # Fatura İşlemleri
     def fatura_kaydet(self):
         try:
+            islem_tarihi = self.fatura_tarih.get_date()
+            
             if self.viewmodel.fatura_ekle(
                 self.fatura_no.get(),
                 float(self.fatura_tutar.get() or 0),
-                self.fatura_tur.get()
+                self.fatura_tur.get(),
+                islem_tarihi
             ):
                 messagebox.showinfo("Başarılı", "Fatura kaydedildi")
                 self.fatura_listele()
@@ -336,19 +427,28 @@ class AnaPencere(tk.Tk):
             self.fatura_tablo.delete(item)
         
         for fatura in self.viewmodel.fatura_listele():
-            self.fatura_tablo.insert("", "end", values=fatura)
+            self.fatura_tablo.insert("", "end", values=(
+                fatura[0],         # ID
+                fatura[1],         # Fatura No
+                fatura[2],         # Tutar
+                fatura[3],         # Tür
+                fatura[4]          # İşlem Tarihi
+            ))
 
     def fatura_formu_temizle(self):
         self.fatura_no.delete(0, tk.END)
         self.fatura_tutar.delete(0, tk.END)
         self.fatura_tur.set('')
+        self.fatura_tarih.set_date(datetime.now())
 
     # Çek/Senet İşlemleri
     def cek_senet_kaydet(self):
         try:
+            vade_tarihi = self.vade_tarihi.get_date()  # DateEntry'den tarihi al
+            
             if self.viewmodel.cek_senet_ekle(
                 self.evrak_turu.get(),
-                self.vade_tarihi.get(),
+                vade_tarihi,
                 float(self.evrak_tutar.get() or 0)
             ):
                 messagebox.showinfo("Başarılı", "Çek/Senet kaydedildi")
@@ -363,8 +463,13 @@ class AnaPencere(tk.Tk):
         for item in self.cek_senet_tablo.get_children():
             self.cek_senet_tablo.delete(item)
         
-        for evrak in self.viewmodel.vadesi_yaklasan_cek_senetler():
-            self.cek_senet_tablo.insert("", "end", values=evrak)
+        for evrak in self.viewmodel.vadesi_yaklasan_cek_senetler(None):
+            self.cek_senet_tablo.insert("", "end", values=(
+                evrak[0],          # ID
+                evrak[1],          # Evrak Türü
+                evrak[2],          # Vade Tarihi
+                evrak[3]           # Tutar
+            ))
 
     def cek_senet_formu_temizle(self):
         self.evrak_turu.set('')
@@ -615,3 +720,18 @@ class AnaPencere(tk.Tk):
                 "Hata",
                 f"Beklenmeyen bir hata oluştu:\n{str(e)}"
             ) 
+
+    def sekme_degisti(self, event):
+        # Seçili sekmenin indeksini al
+        secili_sekme = self.notebook.select()
+        sekme_index = self.notebook.index(secili_sekme)
+        
+        # Seçili sekmeye göre verileri güncelle
+        if sekme_index == 0:  # Cari Hesaplar
+            self.cari_hesaplari_listele()
+        elif sekme_index == 1:  # Kasa
+            self.kasa_listele()
+        elif sekme_index == 2:  # Faturalar
+            self.fatura_listele()
+        elif sekme_index == 3:  # Çek/Senet
+            self.cek_senet_listele() 
